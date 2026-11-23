@@ -6,6 +6,8 @@ type TitleResponse = Awaited<ReturnType<ReturnType<Stream>["result"]>>;
 
 const EXCERPT_LIMIT = 6_000;
 const TITLE_LIMIT = 72;
+const OUTPUT_TOKENS = 64;
+const REASONING_OUTPUT_TOKENS = 512;
 const TIMEOUT_MS = 5_000;
 const TITLE_PROMPT =
   "Write one short title for this coding session, at most 72 characters. " +
@@ -149,7 +151,8 @@ export async function requestTitle(
       }, {
         cacheRetention: "none",
         disableContinuation: true,
-        maxTokens: Math.min(64, model.maxTokens),
+        // Some providers count reasoning against the same cap as the title text.
+        maxTokens: Math.min(model.reasoning ? REASONING_OUTPUT_TOKENS : OUTPUT_TOKENS, model.maxTokens),
         signal: requestSignal,
         timeoutMs: TIMEOUT_MS,
       }).result(),

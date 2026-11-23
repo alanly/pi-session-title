@@ -163,6 +163,22 @@ test("requests a separate tool-free title with a bounded excerpt and token limit
   }
 });
 
+test("allows for reasoning tokens before the title without exceeding the model limit", async () => {
+  for (const [maxTokens, expectedBudget] of [[1024, 512], [384, 384]]) {
+    const chosen = { ...model, reasoning: true, maxTokens };
+    const result = await requestTitle({
+      streamSimple(_model, _context, options) {
+        assert.equal(options?.maxTokens, expectedBudget);
+        return streamResult(async () => response([
+          { type: "thinking", thinking: "Select the main topic" },
+          text("Fix pagination test"),
+        ]));
+      },
+    }, chosen, "Fix an off-by-one error in a pagination test.", new AbortController().signal);
+    assert.equal(result, "Fix pagination test");
+  }
+});
+
 test("strips terminal controls while keeping printable single-line Unicode", async () => {
   assert.equal(await ask(response("\x1b[31m修复缓存 🧑‍💻\x1b[0m")), "修复缓存 🧑‍💻");
   assert.equal(await ask(response("\x1b]8;;https://hidden.invalid\x07Café\x1b]8;;\x1b\\ \x1bPdiscard\x1b\\الملفات\x00")),
