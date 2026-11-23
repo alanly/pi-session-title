@@ -1,0 +1,26 @@
+{
+  "name": "pi-session-title",
+  "version": "0.1.0",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "files": ["src"],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "node --test \"test/unit/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "node --test \"test/integration/**/*.test.ts\""
+  },
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.6.0",
+    "@types/node": "22.19.19",
+    "typescript": "5.9.3"
+  }
+}
