@@ -41,13 +41,21 @@ Add it to `~/.pi/agent/settings.json`:
   and internal characters such as `/`.
 - `enabled` (optional boolean, default `true`): set to `false` to turn titling
   off without removing the configuration.
+- `thinkingLevel` (optional string): set `off`, `minimal`, `low`, `medium`,
+  `high`, `xhigh`, or `max` for title generation only. The model must support
+  the level. If omitted, the extension selects the first supported level in
+  this order: `off`, `minimal`, `low`. If none are supported, set a level
+  explicitly. An unsupported level prevents the title request rather than
+  increasing effort. This setting does not change `/thinking` for the main
+  conversation.
 
 Pi merges user settings with settings from trusted projects. A trusted
 project's `.pi/settings.json` can override individual title settings.
 
 Use a built-in model or define a custom model in `~/.pi/agent/models.json`.
-Missing, disabled, or invalid settings, or an unknown model, prevent title
-requests. The extension does not fall back to the active model.
+Missing, disabled, or invalid settings, an unknown model, or an unsupported
+thinking level prevent title requests. The extension does not fall back to
+the active model.
 
 The title provider receives a bounded excerpt, which can still contain
 sensitive text. Choose a provider that can receive this data. Pi handles

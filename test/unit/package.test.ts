@@ -8,6 +8,7 @@ const manifest = JSON.parse(readFileSync(manifestUrl, "utf8"));
 test("declares the Pi host as a peer and ships no runtime dependencies", () => {
   assert.equal(manifest.name, "pi-session-title");
   assert.equal(manifest.type, "module");
+  assert.equal(manifest.peerDependencies["@earendil-works/pi-ai"], "*");
   assert.equal(manifest.peerDependencies["@earendil-works/pi-coding-agent"], "*");
   assert.equal(manifest.devDependencies["@earendil-works/pi-coding-agent"], "1.6.0");
   assert.deepEqual(manifest.dependencies ?? {}, {});

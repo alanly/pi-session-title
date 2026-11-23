@@ -149,7 +149,7 @@ interface FakeCtxOptions {
 function createFakeCtx(options: FakeCtxOptions) {
   const notifications: { message: string; type?: string }[] = [];
   const findCalls: [string, string][] = [];
-  const requests: { model: unknown; content: unknown; systemPrompt: unknown }[] = [];
+  const requests: { model: unknown; content: unknown; systemPrompt: unknown; reasoning?: string }[] = [];
   const session = options.session ?? createFakeSession({ projection: options.messages });
 
   const ctx = {
@@ -170,11 +170,12 @@ function createFakeCtx(options: FakeCtxOptions) {
         findCalls.push([provider, modelId]);
         return options.model;
       },
-      streamSimple(model: unknown, context: any, _streamOptions: unknown) {
+      streamSimple(model: unknown, context: any, streamOptions: Parameters<Stream>[2]) {
         requests.push({
           model,
           content: context.messages?.[0]?.content,
           systemPrompt: context.systemPrompt,
+          reasoning: streamOptions?.reasoning,
         });
         return {
           result: async () => {
@@ -331,6 +332,43 @@ test("/retitle with an unresolvable title model notifies a generic reason and sk
   assert.match(fake.notifications[0].message, /model|configur/i);
   assert.ok(!/fixture|title-model|provider/i.test(fake.notifications[0].message.replace(/model/i, "")),
     "the reason must not expose provider details");
+});
+
+test("/retitle honors an explicit model-supported thinking level", async () => {
+  const { command, fakePi } = setup({ settings: { ...settings, thinkingLevel: "high" } });
+  const fake = createFakeCtx({
+    model: { ...titleModel, reasoning: true },
+    messages: [user("Fix the sorting bugs")],
+    respond: () => response("Sorting fixes"),
+  });
+
+  await command.handler("", fake.ctx);
+
+  assert.equal(fake.requests[0]?.reasoning, "high");
+  assert.deepEqual(fakePi.savedNames, ["Sorting fixes"]);
+});
+
+test("/retitle does not send an unsupported explicit level or raise the default above low", async () => {
+  const model = {
+    ...titleModel,
+    reasoning: true,
+    thinkingLevelMap: { off: null, minimal: null, low: null, medium: null, high: "high" },
+  };
+  for (const thinkingLevel of [undefined, "off"] as const) {
+    const { command, fakePi } = setup({ settings: { ...settings, thinkingLevel } });
+    const fake = createFakeCtx({
+      model,
+      messages: [user("Fix the sorting bugs")],
+      respond: () => response("Sorting fixes"),
+    });
+
+    await command.handler("", fake.ctx);
+
+    assert.equal(fake.requests.length, 0);
+    assert.deepEqual(fakePi.savedNames, []);
+    assert.equal(fake.notifications[0]?.type, "warning");
+    assert.match(fake.notifications[0]?.message ?? "", /thinking level/i);
+  }
 });
 
 test("/retitle with no usable conversation text notifies a generic reason and skips the provider", async () => {

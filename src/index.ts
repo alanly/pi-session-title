@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { readTitleSettings, resolveTitleModel, type TitleSettings } from "./config.ts";
+import { readTitleSettings, resolveTitleModel, resolveTitleThinkingLevel, type TitleSettings } from "./config.ts";
 import { createTitleJobs, latestNameEntryId } from "./jobs.ts";
 import { registerRetitle } from "./retitle.ts";
 import { buildPromptExcerpt, requestTitle } from "./title.ts";
@@ -30,9 +30,11 @@ export default function sessionTitle(pi: ExtensionAPI): void {
     if (!excerpt) return;
     const model = resolveTitleModel(ctx.modelRegistry, settings);
     if (!model) return;
+    const thinkingLevel = resolveTitleThinkingLevel(model, settings.thinkingLevel);
+    if (!thinkingLevel) return;
 
     // Pi awaits this hook; do not return the job or delay the main model request.
-    void jobs.start(ctx, (signal) => requestTitle(ctx.modelRegistry, model, excerpt, signal)).catch(() => {
+    void jobs.start(ctx, (signal) => requestTitle(ctx.modelRegistry, model, excerpt, signal, thinkingLevel)).catch(() => {
       // Automatic naming is best effort. Do not expose provider errors.
     });
   });

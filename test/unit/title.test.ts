@@ -147,6 +147,7 @@ test("requests a separate tool-free title with a bounded excerpt and token limit
         assert.equal(message.role, "user");
         if (message.role === "user") assert.equal(message.content, "Z".repeat(6_000));
         assert.equal(options?.cacheRetention, "none");
+        assert.equal(options?.reasoning, undefined);
         assert.equal(options?.maxTokens, Math.min(64, maxTokens));
         assert.ok(options?.signal);
         assert.notEqual(options.signal, controller.signal);
@@ -169,12 +170,13 @@ test("allows for reasoning tokens before the title without exceeding the model l
     const result = await requestTitle({
       streamSimple(_model, _context, options) {
         assert.equal(options?.maxTokens, expectedBudget);
+        assert.equal(options?.reasoning, "low");
         return streamResult(async () => response([
           { type: "thinking", thinking: "Select the main topic" },
           text("Fix pagination test"),
         ]));
       },
-    }, chosen, "Fix an off-by-one error in a pagination test.", new AbortController().signal);
+    }, chosen, "Fix an off-by-one error in a pagination test.", new AbortController().signal, "low");
     assert.equal(result, "Fix pagination test");
   }
 });

@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { TitleJobController } from "./jobs.ts";
-import { resolveTitleModel, type TitleSettings } from "./config.ts";
+import { resolveTitleModel, resolveTitleThinkingLevel, type TitleSettings } from "./config.ts";
 import { buildContextExcerpt, requestTitle } from "./title.ts";
 
 export function registerRetitle(
@@ -37,13 +37,22 @@ async function retitle(
     return;
   }
 
+  const thinkingLevel = resolveTitleThinkingLevel(model, settings.thinkingLevel);
+  if (!thinkingLevel) {
+    const message = settings.thinkingLevel === undefined
+      ? "The title model has no low-effort thinking level. Set sessionTitle.thinkingLevel to a supported level."
+      : `The title model does not support thinking level "${settings.thinkingLevel}".`;
+    notify(ctx, message, "warning");
+    return;
+  }
+
   const excerpt = buildContextExcerpt(ctx.sessionManager.buildSessionProjection().messages);
   if (!excerpt) {
     notify(ctx, "There is no conversation text to name this session from yet.", "warning");
     return;
   }
 
-  const outcome = await jobs.start(ctx, (signal) => requestTitle(ctx.modelRegistry, model, excerpt, signal));
+  const outcome = await jobs.start(ctx, (signal) => requestTitle(ctx.modelRegistry, model, excerpt, signal, thinkingLevel));
   if (outcome === "failed") {
     notify(ctx, "Could not generate a session title. The current name is kept.", "warning");
   }

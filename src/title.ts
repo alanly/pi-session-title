@@ -1,3 +1,4 @@
+import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 type ProjectionMessages = ReturnType<ExtensionContext["sessionManager"]["buildSessionProjection"]>["messages"];
@@ -127,6 +128,7 @@ export async function requestTitle(
   model: Parameters<Stream>[0],
   excerpt: string,
   signal: AbortSignal,
+  thinkingLevel: ModelThinkingLevel = "off",
 ): Promise<string | undefined> {
   if (signal.aborted) return;
   const source = capStart(excerpt.trim());
@@ -151,6 +153,7 @@ export async function requestTitle(
       }, {
         cacheRetention: "none",
         disableContinuation: true,
+        reasoning: thinkingLevel === "off" ? undefined : thinkingLevel,
         // Some providers count reasoning against the same cap as the title text.
         maxTokens: Math.min(model.reasoning ? REASONING_OUTPUT_TOKENS : OUTPUT_TOKENS, model.maxTokens),
         signal: requestSignal,

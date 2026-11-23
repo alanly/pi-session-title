@@ -14,6 +14,7 @@ test("skip custom starts and claim the first user run before history or a title 
     registerCommand() {},
   };
   let calls = 0;
+  let reasoning: unknown;
   let fail!: (error: Error) => void;
   const pending = new Promise<never>((_resolve, reject) => { fail = reject; });
   const ctx = {
@@ -23,9 +24,10 @@ test("skip custom starts and claim the first user run before history or a title 
       getEntries: () => [],
     },
     modelRegistry: {
-      find: () => ({ maxTokens: 64 }),
-      streamSimple() {
+      find: () => ({ maxTokens: 512, reasoning: true, thinkingLevelMap: { off: null, minimal: null } }),
+      streamSimple(_model: unknown, _context: unknown, options: { reasoning?: string }) {
         calls++;
+        reasoning = options.reasoning;
         return { result: () => pending };
       },
     },
@@ -39,6 +41,7 @@ test("skip custom starts and claim the first user run before history or a title 
     assert.equal(calls, 0);
     assert.equal(before(user, ctx), undefined, "the hook must not return the title job");
     assert.equal(calls, 1, "a custom run must not claim the attempt");
+    assert.equal(reasoning, "low", "auto chooses the least available effort for the title model");
     before(user, ctx);
     assert.equal(calls, 1, "a pending attempt must not be replaced even before history is saved");
     fail(new Error("Private provider error"));

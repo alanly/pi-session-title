@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   readTitleSettings,
   resolveTitleModel,
+  resolveTitleThinkingLevel,
   type TitleSettings,
 } from "../../src/config.ts";
 
@@ -56,6 +57,17 @@ test("readTitleSettings preserves exact strings, case, and internal slashes", ()
   });
 });
 
+test("readTitleSettings validates the optional thinking level", () => {
+  for (const thinkingLevel of ["off", "minimal", "low", "medium", "high", "xhigh", "max"]) {
+    const sessionTitle = { provider: "fixture", modelId: "m", thinkingLevel };
+    assert.deepEqual(readTitleSettings({ sessionTitle }), sessionTitle);
+  }
+  for (const thinkingLevel of ["none", "LOW", "", null, 1, true]) {
+    const sessionTitle = { provider: "fixture", modelId: "m", thinkingLevel };
+    assert.equal(readTitleSettings({ sessionTitle }), undefined);
+  }
+});
+
 test("readTitleSettings returns undefined when sessionTitle is missing", () => {
   assert.equal(readTitleSettings(undefined), undefined);
   assert.equal(readTitleSettings(null), undefined);
@@ -85,7 +97,6 @@ test("readTitleSettings returns undefined for malformed settings", () => {
     { sessionTitle: { enabled: 1, provider: "fixture", modelId: "m" } },
     { sessionTitle: { provider: "fixture", modelId: "m", extra: "ignored" } },
   ];
-  // The last entry keeps unknown keys; only enabled/provider/modelId are validated.
   assert.deepEqual(
     readTitleSettings({ sessionTitle: { provider: "fixture", modelId: "m", extra: "ignored" } }),
     { provider: "fixture", modelId: "m" },
@@ -135,4 +146,25 @@ test("resolveTitleModel never falls back to another provider or model", () => {
   const model = resolveTitleModel(registry, { provider: "fixture", modelId: "title-model" });
   assert.equal(model, undefined);
   assert.deepEqual(calls, [["fixture", "title-model"]]);
+});
+
+function thinkingModel(reasoning: boolean, thinkingLevelMap?: TitleModel["thinkingLevelMap"]): TitleModel {
+  return { reasoning, thinkingLevelMap } as TitleModel;
+}
+
+test("defaults to the lowest supported title thinking level, up to low", () => {
+  assert.equal(resolveTitleThinkingLevel(thinkingModel(false)), "off");
+  assert.equal(resolveTitleThinkingLevel(thinkingModel(true)), "off");
+  assert.equal(resolveTitleThinkingLevel(thinkingModel(true, { off: null })), "minimal");
+  assert.equal(resolveTitleThinkingLevel(thinkingModel(true, { off: null, minimal: null })), "low");
+  assert.equal(resolveTitleThinkingLevel(thinkingModel(true, { off: null, minimal: null, low: null })), undefined);
+});
+
+test("honors supported explicit levels and does not clamp unsupported ones", () => {
+  const model = thinkingModel(true, { off: null, minimal: null, low: "low" });
+  assert.equal(resolveTitleThinkingLevel(model, "high"), "high");
+  assert.equal(resolveTitleThinkingLevel(model, "off"), undefined);
+  assert.equal(resolveTitleThinkingLevel(thinkingModel(false), "low"), undefined);
+  const highOnly = thinkingModel(true, { off: null, minimal: null, low: null, medium: null, high: "high" });
+  assert.equal(resolveTitleThinkingLevel(highOnly, "high"), "high");
 });
